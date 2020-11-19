@@ -41,7 +41,7 @@ describe('bull-reloadable-config', () => {
     await reloadConfig(queueName, { createClient }, configs);
     const job = await queue.getJob(jobId);
     expect(job!.data).toEqual({ _version: VERSION_0_0_4, ...extraData });
-    expect(createClient).toHaveBeenCalledWith('client', expect.any(Object))
+    expect(createClient).toHaveBeenCalledWith('client', expect.any(Object));
   });
 
   it('throws if a job as no options', async () => {
@@ -133,10 +133,12 @@ describe('bull-reloadable-config', () => {
     ];
     await reloadConfig(queueName, queueOptions, configs);
     let job = (await queue.getRepeatableJobs())[0];
-    expect(job).toEqual(expect.objectContaining({
-      id: 'myjobid',
-      every: 5,
-    }));
+    expect(job).toEqual(
+      expect.objectContaining({
+        id: 'myjobid',
+        every: 5,
+      }),
+    );
 
     await reloadConfig(queueName, queueOptions, [
       {
@@ -145,10 +147,12 @@ describe('bull-reloadable-config', () => {
       },
     ]);
     job = (await queue.getRepeatableJobs())[0];
-    expect(job).toEqual(expect.objectContaining({
-      id: 'myjobid',
-      every: 8,
-    }));
+    expect(job).toEqual(
+      expect.objectContaining({
+        id: 'myjobid',
+        every: 8,
+      }),
+    );
     // job = await queue.getJob(jobId);
     // expect(job!.data).toEqual({ _version: '0.0.5', ...extraData });
     // expect(job!.opts).toMatchObject({ attempts: 5, delay: 8 });
@@ -183,7 +187,7 @@ describe('bull-reloadable-config', () => {
     const jobId = 'myjobid';
     const configs: BullConfig[] = [
       {
-        data: {  ...extraData },
+        data: { ...extraData },
         opts: { jobId },
       },
     ];
@@ -193,12 +197,12 @@ describe('bull-reloadable-config', () => {
 
     await reloadConfig(queueName, queueOptions, [
       {
-        data: {  ...extraData },
+        data: { ...extraData },
         opts: { jobId, attempts: 5, delay: 8 },
       },
     ]);
     job = await queue.getJob(jobId);
-    expect(job!.data).toEqual({  ...extraData });
+    expect(job!.data).toEqual({ ...extraData });
     expect(job!.opts).toMatchObject({ attempts: 5, delay: 8 });
   });
 
@@ -213,8 +217,7 @@ describe('bull-reloadable-config', () => {
     ];
     await reloadConfig(queueName, queueOptions, configs);
     const job = await queue.getJob(jobId);
-    expect(job!.data).toEqual([extraData ]);
-
+    expect(job!.data).toEqual([extraData]);
   });
 
   it('does not recreate a job in the lower version', async () => {

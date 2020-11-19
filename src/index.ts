@@ -5,7 +5,10 @@ import Semver from 'semver';
 import Queue from 'bull';
 import pMap from 'p-map';
 
-export interface BullConfig {
+type NoInfer<T> = [T][T extends any ? 0 : never];
+type OptionalArray<T> = T | T[];
+
+export interface BullConfig<T = any> {
   /**
    * If true, the config is reloaded even if it is older than the current one
    */
@@ -17,8 +20,7 @@ export interface BullConfig {
   /**
    * @field _version: a semver version of this job
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: { [k: string]: unknown; _version?: string } | any[];
+  data: OptionalArray<T & { _version?: string }>;
   opts: { jobId: Bull.JobId } & Bull.JobOptions;
 }
 
@@ -43,10 +45,10 @@ function sameConfig(config: BullConfig, job: Bull.Job) {
  * @param deleteExtraJobs if true the jobs of the queue that does not exist in the config will be deleted. If a job has no _id it won't be deleted.
  * @param concurrency How many job can be handled concurrently
  */
-export async function reloadConfig(
+export async function reloadConfig<T = any>(
   queueName: string,
   queueOptions: Bull.QueueOptions,
-  configs: BullConfig[],
+  configs: BullConfig<NoInfer<T>>[],
   deleteExtraJobs = false,
   concurrency = 5000,
 ) {
@@ -97,7 +99,7 @@ export async function reloadConfig(
           maintenancePromises.push(() => existingJob.update(config.data));
         } else {
           maintenancePromises.push(async () => {
-            await existingJob.remove()
+            await existingJob.remove();
             if (config.name) {
               await queue.add(config.name, config.data, config.opts);
             } else {
