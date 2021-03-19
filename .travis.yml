@@ -4,7 +4,7 @@ language: node_js
 services:
   - redis-server
 node_js:
-  - "12"
+  - "14"
 after_success:
   - npm run lint -- --no-fix
   - npm run test -- --coverage
