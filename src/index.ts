@@ -120,10 +120,23 @@ export async function reloadConfig<T = any>(
   });
 
   if (deleteExtraJobs) {
+    const repeatableJobs = await queue.getRepeatableJobs();
+    repeatableJobs.forEach(repetable => {
+      if (!repetable.id || !configsById[repetable.id]) {
+        maintenancePromises.push(() => queue.removeRepeatableByKey(repetable.key))
+      }
+    })
     jobs.forEach(job => {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (!configsById[job.id]) {
-        maintenancePromises.push(() => job.remove());
+        maintenancePromises.push(async () => {
+          if(job.opts.repeat) {
+            const prefix = job.id.toString().split(':')[0] + ':' + job.id.toString().split(':')[1]
+            return queue.removeJobs(prefix + ':*')
+          } else {
+            return job.remove();
+          }
+        })
       }
     });
   }

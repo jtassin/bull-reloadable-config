@@ -1,6 +1,6 @@
 import Queue from 'bull';
-
-import { reloadConfig, BullConfig } from '..';
+import { BullConfig, reloadConfig } from '..';
+import delay from 'delay';
 
 describe('bull-reloadable-config', () => {
   const VERSION_0_0_4 = '0.0.4';
@@ -122,41 +122,100 @@ describe('bull-reloadable-config', () => {
     expect(job!.name).toBe('Heisenberg');
   });
 
-  it('recreate a repeatable job', async () => {
-    const extraData = { a: 'g' };
-    const jobId = 'myjobid';
-    const configs: BullConfig[] = [
-      {
-        data: { _version: VERSION_0_0_4, ...extraData },
-        opts: { jobId, repeat: { every: 5 } },
-      },
-    ];
-    await reloadConfig(queueName, queueOptions, configs);
-    let job = (await queue.getRepeatableJobs())[0];
-    expect(job).toEqual(
-      expect.objectContaining({
-        id: 'myjobid',
-        every: 5,
-      }),
-    );
+  describe('repeatable job', () => {
+    describe('deleteExtraJobs : true', () => {
+      it('removed the jobs and the repeatable jobs', async () => {
+        var queue = new Queue<{ a: string }>(queueName);
+        await queue.add({
+          a: 'extra',
+        }, {
+          repeat: {
+            every: 1000000,
+          },
+          jobId: 'extraJob'
+        });
+  
+        let resolved: () => void;
+        const promise = new Promise<void>((resolve) => {
+          resolved = resolve;
+        });
+        queue.process(async ({ data }) => {
+          if (data.a === '555') {
+            resolved()
+          }
+        })
+  
+        const extraData = { a: 'g' };
+        const jobId = 'myjobid';
+        await delay(10);
+  
+        await reloadConfig(queueName, queueOptions, [
+          {
+            data: { _version: '0.0.5', ...extraData, a: '555' },
+            opts: { jobId, repeat: { every: 8 } },
+          },
+        ], true);
+        await promise; // The test will be stucked here if the config is not changed
+        await delay(10)
+        const jobs = await queue.getJobs(['waiting', 'delayed', 'active', 'paused'])
+        expect(jobs).toEqual([
+          expect.objectContaining({
+            opts: expect.objectContaining({
+              repeat: expect.objectContaining({
+                jobId: 'myjobid',
+                every: 8,
+              })
+            })
+          })
+        ])
+        const repeatableJobs = await queue.getRepeatableJobs();
+        expect(repeatableJobs).toHaveLength(1)
+        expect(repeatableJobs[0]).toEqual(
+          expect.objectContaining({
+            id: 'myjobid',
+            every: 8,
+          }),
+        );
+        await queue.close()
+  
+      });
+    })
 
-    await reloadConfig(queueName, queueOptions, [
-      {
-        data: { _version: '0.0.5', ...extraData },
-        opts: { jobId, repeat: { every: 8 } },
-      },
-    ]);
-    job = (await queue.getRepeatableJobs())[0];
-    expect(job).toEqual(
-      expect.objectContaining({
-        id: 'myjobid',
-        every: 8,
-      }),
-    );
-    // job = await queue.getJob(jobId);
-    // expect(job!.data).toEqual({ _version: '0.0.5', ...extraData });
-    // expect(job!.opts).toMatchObject({ attempts: 5, delay: 8 });
-  });
+    it('recreates a repeatable job', async () => {
+      const extraData = { a: 'g' };
+      const jobId = 'myjobid';
+      const configs: BullConfig[] = [
+        {
+          data: { _version: VERSION_0_0_4, ...extraData },
+          opts: { jobId, repeat: { every: 5 } },
+        },
+      ];
+      await reloadConfig(queueName, queueOptions, configs);
+      let job = (await queue.getRepeatableJobs())[0];
+      expect(job).toEqual(
+        expect.objectContaining({
+          id: 'myjobid',
+          every: 5,
+        }),
+      );
+
+      await reloadConfig(queueName, queueOptions, [
+        {
+          data: { _version: '0.0.5', ...extraData },
+          opts: { jobId, repeat: { every: 8 } },
+        },
+      ]);
+      job = (await queue.getRepeatableJobs())[0];
+      expect(job).toEqual(
+        expect.objectContaining({
+          id: 'myjobid',
+          every: 8,
+        }),
+      );
+    });
+  })
+
+
 
   it('recreate a job in the higher version with changes', async () => {
     const extraData = { a: 'g' };
