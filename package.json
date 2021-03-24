@@ -1,6 +1,6 @@
 {
   "name": "bull-reloadable-config",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Deply a reloadable bull config with code",
   "main": "build/index.js",
   "files": [
