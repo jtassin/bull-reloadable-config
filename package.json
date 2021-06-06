@@ -51,7 +51,7 @@
     "delay": "^5.0.0",
     "eslint": "6.8.0",
     "husky": "4.2.5",
-    "ioredis": "^4.17.3",
+    "ioredis": "4.27.5",
     "jest": "^26.0.1",
     "lint-staged": "10.2.13",
     "release-it": "13.6.5",
